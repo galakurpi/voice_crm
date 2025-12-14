@@ -18,7 +18,15 @@ from .close_service import (
 )
 
 logger = logging.getLogger(__name__)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Load API key - will be set from environment or .env file
+def get_openai_api_key():
+    """Get OpenAI API key from environment."""
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        logger.warning("OPENAI_API_KEY not found in environment")
+        print("[WARNING] OPENAI_API_KEY not found in environment")
+    return key
 
 from websockets.protocol import State
 
@@ -66,7 +74,8 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
 
     async def connect_to_openai(self):
         """Main loop for OpenAI Realtime API connection."""
-        if not OPENAI_API_KEY:
+        api_key = get_openai_api_key()
+        if not api_key:
             error_msg = "OPENAI_API_KEY not set in environment"
             print(f"[ERROR] {error_msg}")
             logger.error(error_msg)
@@ -75,7 +84,7 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
             
         url = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
         headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "OpenAI-Beta": "realtime=v1",
         }
         
