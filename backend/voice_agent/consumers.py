@@ -4,6 +4,7 @@ import asyncio
 import websockets
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.utils import timezone
 from .close_service import (
     search_leads, 
     add_lead_note, 
@@ -16,6 +17,7 @@ from .close_service import (
     get_opportunities,
     list_leads
 )
+from .models import SecurityLog
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +31,38 @@ def get_openai_api_key():
     return key
 
 from websockets.protocol import State
+from websockets.exceptions import InvalidStatus
 
 class VoiceAgentConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         """Handle incoming WebSocket connection from the frontend."""
         try:
+            # Check if user is authenticated (AuthMiddlewareStack provides this)
+            user = self.scope.get('user')
+            if not user or not user.is_authenticated:
+                logger.warning(f"Unauthenticated WebSocket connection attempt from {self.scope.get('client')}")
+                await self.close(code=4001)  # Unauthorized
+                return
+            
+            # Store authenticated user for this connection
+            self.user = user
+            
+            # Log WebSocket connection for security audit
+            try:
+                client_info = self.scope.get('client', ['unknown'])[0] if self.scope.get('client') else 'unknown'
+                SecurityLog.objects.create(
+                    event_type='websocket_connected',
+                    user=user,
+                    ip_address=client_info,
+                    user_agent=self.scope.get('headers', {}).get(b'user-agent', b'').decode('utf-8', errors='ignore'),
+                    details={'path': self.scope.get('path', '')}
+                )
+            except Exception as e:
+                logger.error(f"Failed to log WebSocket connection: {e}")
+            
             await self.accept()
-            print(f"[INFO] Frontend connected: {self.scope['client']}")
-            logger.info(f"Frontend WebSocket connected from {self.scope['client']}")
+            print(f"[INFO] Frontend connected: {user.email} from {self.scope['client']}")
+            logger.info(f"Frontend WebSocket connected: {user.email} from {self.scope['client']}")
             
             self.openai_ws = None
             self.openai_task = None
@@ -47,6 +73,19 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         """Cleanup when frontend disconnects."""
+        # Log WebSocket disconnection for security audit
+        if hasattr(self, 'user') and self.user:
+            try:
+                client_info = self.scope.get('client', ['unknown'])[0] if self.scope.get('client') else 'unknown'
+                SecurityLog.objects.create(
+                    event_type='websocket_disconnected',
+                    user=self.user,
+                    ip_address=client_info,
+                    details={'close_code': close_code}
+                )
+            except Exception as e:
+                logger.error(f"Failed to log WebSocket disconnection: {e}")
+        
         print(f"[INFO] Frontend disconnected. Close code: {close_code}")
         logger.info(f"Frontend WebSocket disconnected. Close code: {close_code}")
         if self.openai_ws:
@@ -327,11 +366,21 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
 
     async def handle_tool_call(self, data):
         """Execute the tool and return results to OpenAI."""
+        # Verify user is still authenticated
+        if not hasattr(self, 'user') or not self.user or not self.user.is_authenticated:
+            logger.warning(f"Unauthenticated tool call attempt")
+            result = "Error: Authentication required"
+            await self.send(text_data=json.dumps({"type": "error", "error": "Authentication required"}))
+            return
+        
         call_id = data.get("call_id")
         name = data.get("name")
         arguments = json.loads(data.get("arguments"))
         
-        print(f"Executing tool: {name} with args: {arguments}")
+        # Log tool call with user context for security audit
+        user_email = self.user.email if self.user else "Unknown"
+        print(f"[USER: {user_email}] Executing tool: {name} with args: {arguments}")
+        logger.info(f"Tool call: {name} by user {user_email}, args: {arguments}")
         
         result = "Error: Tool not found"
         if name == "search_leads":
@@ -369,6 +418,24 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
             result = await list_leads(arguments.get("limit", 200), arguments.get("query", ""))
             
         print(f"Tool Result: {result}")
+        
+        # Log tool call and result to security audit log
+        try:
+            client_info = self.scope.get('client', ['unknown'])[0] if self.scope.get('client') else 'unknown'
+            result_preview = str(result)[:200] if result else "No result"
+            SecurityLog.objects.create(
+                event_type='tool_call',
+                user=self.user,
+                ip_address=client_info,
+                details={
+                    'tool_name': name,
+                    'arguments': str(arguments)[:500],  # Limit length to avoid huge logs
+                    'result_preview': result_preview,
+                    'success': not result.startswith("Error:") if isinstance(result, str) else True
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to log tool call: {e}")
 
         # 1. Send result back to OpenAI
         tool_output = {

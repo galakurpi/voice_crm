@@ -16,7 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from voice_agent import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Authentication endpoints
+    path('auth/register', views.register_view, name='register'),
+    path('auth/login', views.login_view, name='login'),
+    path('auth/logout', views.logout_view, name='logout'),
+    path('auth/check', views.check_auth_view, name='check_auth'),
 ]

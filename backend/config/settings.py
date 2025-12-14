@@ -10,22 +10,32 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file if it exists
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&wzy%455x4_y8_&=l-e$_xvb-h22&t4xavjs(4w05z&ct7d)(j'
+# Get SECRET_KEY from environment variable, fallback to insecure key for development only
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-&wzy%455x4_y8_&=l-e$_xvb-h22&t4xavjs(4w05z&ct7d)(j')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG=False for production, use environment variable to override
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# Allowed hosts - configure via environment variable in production
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -51,9 +61,20 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'voice_agent.middleware.RateLimitMiddleware',  # Rate limiting for login protection
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True  # For development convenience
+# CORS settings for authenticated requests
+# In production, set CORS_ALLOWED_ORIGINS environment variable with comma-separated origins
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in debug mode
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies/credentials for authentication
+# Set allowed origins from environment or use defaults for development
+if not DEBUG:
+    cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', '')
+    CORS_ALLOWED_ORIGINS = cors_origins.split(',') if cors_origins else []
+else:
+    # Development defaults
+    CORS_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
 
 ASGI_APPLICATION = 'config.asgi.application'
 
@@ -134,3 +155,25 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Security settings - Production configuration
+# Session security - cookies are HttpOnly and Secure in production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = not DEBUG  # Secure cookies in production (requires HTTPS)
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = not DEBUG  # Secure cookies in production (requires HTTPS)
+CSRF_COOKIE_HTTPONLY = True
+
+# Additional security headers for production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Password hashing - Django uses PBKDF2 by default (secure)
+# PASSWORD_HASHERS is already configured with secure defaults

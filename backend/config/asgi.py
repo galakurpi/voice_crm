@@ -22,9 +22,12 @@ class LoggingProtocolTypeRouter(ProtocolTypeRouter):
         # #endregion
         return await super().__call__(scope, receive, send)
 
+# WebSocket authentication middleware - requires user to be authenticated
 application = LoggingProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": URLRouter(
-        voice_agent.routing.websocket_urlpatterns
+    "websocket": AuthMiddlewareStack(  # This requires authentication for WebSocket connections
+        URLRouter(
+            voice_agent.routing.websocket_urlpatterns
+        )
     ),
 })

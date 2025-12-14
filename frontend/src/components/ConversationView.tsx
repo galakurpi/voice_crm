@@ -46,7 +46,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({ messages }) => {
           {message.role === 'user' ? (
             <div className="bg-[#2f2f2f] border border-[#efc824]/30 text-[#efc824] px-4 py-3 rounded-2xl max-w-[80%]">
               <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
-                "{message.text}"
+                {message.text}
               </p>
             </div>
           ) : (
