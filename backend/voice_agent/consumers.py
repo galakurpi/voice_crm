@@ -88,7 +88,7 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
         
         print(f"[INFO] Frontend disconnected. Close code: {close_code}")
         logger.info(f"Frontend WebSocket disconnected. Close code: {close_code}")
-        if self.openai_ws:
+        if hasattr(self, 'openai_ws') and self.openai_ws:
             try:
                 await self.openai_ws.close()
             except:
