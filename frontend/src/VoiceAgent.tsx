@@ -32,7 +32,6 @@ const VoiceAgent: React.FC = () => {
   }, []);
 
   const startSession = async () => {
-    setStatus("Connecting...");
     setIsMuted(false); // Reset mute state when starting new session
     
     // Force direct connection to backend IPv4 loopback to avoid proxy/resolution issues
@@ -44,13 +43,11 @@ const VoiceAgent: React.FC = () => {
     
     socket.onopen = () => {
       if (sessionIdRef.current !== currentSessionId) return;
-      setStatus("Connected");
       setIsConnected(true);
     };
     
     socket.onclose = () => {
         if (sessionIdRef.current !== currentSessionId) return;
-        setStatus("Disconnected");
         setIsConnected(false);
         stopAudio();
     };
@@ -58,7 +55,6 @@ const VoiceAgent: React.FC = () => {
     socket.onerror = (err) => {
         if (sessionIdRef.current !== currentSessionId) return;
         console.error("WebSocket Error", err);
-        setStatus("Connection Error");
         stopSession(socket);
     };
     
@@ -179,7 +175,6 @@ const VoiceAgent: React.FC = () => {
           
       } catch (err) {
           console.error("Audio Init Error", err);
-          setStatus(`Audio Error: ${err}`);
           stopSession();
       }
   };
