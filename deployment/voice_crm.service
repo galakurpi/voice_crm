@@ -1,0 +1,26 @@
+[Unit]
+Description=Voice CRM Django Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/voice_crm/backend
+Environment="PATH=/opt/voice_crm/backend/venv/bin"
+EnvironmentFile=/opt/voice_crm/backend/.env
+ExecStart=/opt/voice_crm/backend/venv/bin/uvicorn config.asgi:application --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=10
+
+# Security settings
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=voice_crm
+
+[Install]
+WantedBy=multi-user.target
