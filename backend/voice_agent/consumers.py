@@ -28,18 +28,25 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
         try:
             await self.accept()
             print(f"[INFO] Frontend connected: {self.scope['client']}")
+            logger.info(f"Frontend WebSocket connected from {self.scope['client']}")
             
             self.openai_ws = None
             self.openai_task = None
         except Exception as e:
             logger.error(f"Error in connect(): {e}", exc_info=True)
+            print(f"[ERROR] Connection error: {e}")
             raise
 
     async def disconnect(self, close_code):
         """Cleanup when frontend disconnects."""
+        print(f"[INFO] Frontend disconnected. Close code: {close_code}")
+        logger.info(f"Frontend WebSocket disconnected. Close code: {close_code}")
         if self.openai_ws:
-            await self.openai_ws.close()
-        if hasattr(self, 'openai_task'):
+            try:
+                await self.openai_ws.close()
+            except:
+                pass
+        if hasattr(self, 'openai_task') and self.openai_task:
             self.openai_task.cancel()
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -59,12 +66,20 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
 
     async def connect_to_openai(self):
         """Main loop for OpenAI Realtime API connection."""
+        if not OPENAI_API_KEY:
+            error_msg = "OPENAI_API_KEY not set in environment"
+            print(f"[ERROR] {error_msg}")
+            logger.error(error_msg)
+            await self.send(text_data=json.dumps({"type": "error", "error": error_msg}))
+            return
+            
         url = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
         headers = {
             "Authorization": f"Bearer {OPENAI_API_KEY}",
             "OpenAI-Beta": "realtime=v1",
         }
         
+        print(f"[INFO] Connecting to OpenAI Realtime API...")
         try:
             # websockets 14+ uses additional_headers instead of extra_headers
             async with websockets.connect(url, additional_headers=headers) as openai_ws:
@@ -111,8 +126,10 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
                         await self.handle_tool_call(data)
                         
         except Exception as e:
-            print(f"OpenAI connection error: {e}")
-            await self.close()
+            print(f"[ERROR] OpenAI connection error: {e}")
+            logger.error(f"OpenAI connection error: {e}", exc_info=True)
+            # Don't close the frontend connection on OpenAI error - let it retry
+            # await self.close()
 
     async def send_session_update(self):
         """Configure the OpenAI session with tools and instructions."""
