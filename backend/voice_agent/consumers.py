@@ -81,6 +81,11 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
             logger.error(error_msg)
             await self.send(text_data=json.dumps({"type": "error", "error": error_msg}))
             return
+        
+        # Debug: Log first/last few chars of key (for debugging without exposing full key)
+        key_preview = f"{api_key[:10]}...{api_key[-10:]}" if len(api_key) > 20 else "***"
+        print(f"[INFO] Using API key: {key_preview}")
+        logger.info(f"Connecting to OpenAI with API key: {key_preview}")
             
         url = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
         headers = {
@@ -134,11 +139,27 @@ class VoiceAgentConsumer(AsyncWebsocketConsumer):
                     if data.get("type") == "response.function_call_arguments.done":
                         await self.handle_tool_call(data)
                         
+        except InvalidStatus as e:
+            error_msg = f"OpenAI API authentication failed (HTTP 401). Check your API key."
+            print(f"[ERROR] {error_msg}")
+            print(f"[ERROR] Full error: {e}")
+            logger.error(f"OpenAI authentication failed: {e}")
+            # Send error to frontend
+            await self.send(text_data=json.dumps({
+                "type": "error", 
+                "error": "OpenAI API authentication failed. Please check your API key."
+            }))
+            # Don't close the frontend connection - let user see the error
         except Exception as e:
-            print(f"[ERROR] OpenAI connection error: {e}")
-            logger.error(f"OpenAI connection error: {e}", exc_info=True)
+            error_msg = f"OpenAI connection error: {e}"
+            print(f"[ERROR] {error_msg}")
+            logger.error(error_msg, exc_info=True)
+            # Send error to frontend
+            await self.send(text_data=json.dumps({
+                "type": "error", 
+                "error": str(e)
+            }))
             # Don't close the frontend connection on OpenAI error - let it retry
-            # await self.close()
 
     async def send_session_update(self):
         """Configure the OpenAI session with tools and instructions."""
