@@ -25,12 +25,22 @@ function App() {
         const response = await fetch(`${getApiUrl()}/auth/check`, {
           credentials: 'include', // Include cookies
         });
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Auth check: Expected JSON but got:', contentType);
+          setChecking(false);
+          return;
+        }
+        
         const data = await response.json();
         if (data.authenticated) {
           setUser(data.user);
         }
       } catch (err) {
         console.error('Auth check failed:', err);
+        // Don't block the UI if auth check fails - just show login page
       } finally {
         setChecking(false);
       }

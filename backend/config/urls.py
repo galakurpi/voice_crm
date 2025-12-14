@@ -20,9 +20,13 @@ from voice_agent import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Authentication endpoints
+    # Authentication endpoints - support both with and without trailing slashes
     path('auth/register', views.register_view, name='register'),
+    path('auth/register/', views.register_view, name='register_slash'),
     path('auth/login', views.login_view, name='login'),
+    path('auth/login/', views.login_view, name='login_slash'),
     path('auth/logout', views.logout_view, name='logout'),
+    path('auth/logout/', views.logout_view, name='logout_slash'),
     path('auth/check', views.check_auth_view, name='check_auth'),
+    path('auth/check/', views.check_auth_view, name='check_auth_slash'),
 ]
