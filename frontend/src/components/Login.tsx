@@ -7,10 +7,8 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -27,14 +25,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const url = isLogin 
-        ? `${getApiUrl()}/auth/login`
-        : `${getApiUrl()}/auth/register`;
+      const url = `${getApiUrl()}/auth/login`;
       
-      const body: any = { email, password };
-      if (!isLogin && username) {
-        body.username = username;
-      }
+      const body = { email, password };
 
       const response = await fetch(url, {
         method: 'POST',
@@ -64,29 +57,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
       <Card className="w-full max-w-md p-8 shadow-lg">
         <h1 className="text-3xl font-bold mb-2 text-center text-gray-800">
-          {isLogin ? 'Login' : 'Create Account'}
+          Login
         </h1>
         <p className="text-center text-gray-600 mb-6 text-sm">
-          {isLogin ? 'Welcome back!' : 'Get started with Voice CRM'}
+          Welcome back!
         </p>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium mb-1">
-                Username (optional)
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Leave empty to use email prefix"
-              />
-            </div>
-          )}
-          
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
               Email
@@ -114,7 +91,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               required
               minLength={8}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder={isLogin ? "Password" : "At least 8 characters"}
+              placeholder="Password"
             />
           </div>
           
@@ -129,22 +106,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             disabled={loading}
             className="w-full py-2 text-base font-semibold"
           >
-            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Create Account')}
+            {loading ? 'Please wait...' : 'Login'}
           </Button>
         </form>
-        
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-            }}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
-          </button>
-        </div>
       </Card>
     </div>
   );
