@@ -13,7 +13,6 @@ interface Message {
 
 const VoiceAgent: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState("Disconnected");
   const [messages, setMessages] = useState<Message[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
