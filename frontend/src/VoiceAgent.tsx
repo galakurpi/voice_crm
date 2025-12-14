@@ -34,9 +34,10 @@ const VoiceAgent: React.FC = () => {
   const startSession = async () => {
     setIsMuted(false); // Reset mute state when starting new session
     
-    // Force direct connection to backend IPv4 loopback to avoid proxy/resolution issues
+    // Use relative WebSocket URL that works with current protocol (ws/wss)
     const currentSessionId = ++sessionIdRef.current;
-    const wsUrl = 'ws://127.0.0.1:8000/ws/voice-agent/';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/voice-agent/`;
     console.log("[VoiceAgent] Connecting WebSocket:", wsUrl);
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
