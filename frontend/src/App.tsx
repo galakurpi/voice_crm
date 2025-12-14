@@ -68,11 +68,14 @@ function App() {
 
   return (
     <div>
-      <div className="bg-gray-800 text-white p-2 flex justify-between items-center">
-        <span>Logged in as: {user.email}</span>
+      <div className="bg-gray-800 text-white p-3 flex justify-between items-center shadow-md">
+        <div className="flex items-center gap-3">
+          <span className="font-medium">Logged in as: {user.email}</span>
+          <span className="text-gray-400">({user.username})</span>
+        </div>
         <button
           onClick={handleLogout}
-          className="px-4 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition-colors"
         >
           Logout
         </button>

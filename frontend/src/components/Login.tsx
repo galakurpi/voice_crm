@@ -61,11 +61,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">
-          {isLogin ? 'Login' : 'Register'}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <Card className="w-full max-w-md p-8 shadow-lg">
+        <h1 className="text-3xl font-bold mb-2 text-center text-gray-800">
+          {isLogin ? 'Login' : 'Create Account'}
         </h1>
+        <p className="text-center text-gray-600 mb-6 text-sm">
+          {isLogin ? 'Welcome back!' : 'Get started with Voice CRM'}
+        </p>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
@@ -124,9 +127,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full"
+            className="w-full py-2 text-base font-semibold"
           >
-            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Register')}
+            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Create Account')}
           </Button>
         </form>
         
